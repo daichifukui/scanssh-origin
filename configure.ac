@@ -17,6 +17,13 @@ fi
 
 dnl Checks for programs.
 AC_PROG_CC
+
+dnl Default CFLAGS when not set by user
+if test -z "$CFLAGS"; then
+	CFLAGS="-O2 -Wall -g"
+fi
+AC_SUBST(CFLAGS)
+
 AC_PROG_INSTALL
 
 dnl XXX - Solaris sux.
@@ -176,11 +183,11 @@ AC_SUBST(DNETLIB)
 
 if test -z "$DNETCOMPAT"
 then
-	CFLAGS="$DNETINC"
+	CFLAGS="$CFLAGS $DNETINC"
 else
-	CFLAGS="-I$DNETCOMPAT $DNETINC"
+	CFLAGS="$CFLAGS -I$DNETCOMPAT $DNETINC"
 fi
-LIBS=$DNETLIB
+LIBS="$LIBS $DNETLIB"
 
 dnl Checks for libevent
 AC_MSG_CHECKING(for libevent)
@@ -219,11 +226,8 @@ AC_ARG_WITH(libevent,
 AC_SUBST(EVENTINC)
 AC_SUBST(EVENTLIB)
 
-CFLAGS=$EVENTINC
-LIBS=$EVENTLIB
-
-CFLAGS=""
-LIBS=""
+CFLAGS="$CFLAGS $EVENTINC"
+LIBS="$LIBS $EVENTLIB"
 
 AC_HEADER_SYS_WAIT
 AC_CHECK_HEADERS(fcntl.h sys/ioctl.h sys/time.h unistd.h)
