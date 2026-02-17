@@ -790,7 +790,7 @@ generate_random(struct generate *gen, char **pline)
 		uint32_t *tmp = (uint32_t *)digest;
 
 		MD5Init(&ctx);
-		MD5Update(&ctx, seed, strlen(seed));
+		MD5Update(&ctx, (const unsigned char *)seed, strlen(seed));
 		MD5Final(digest, &ctx);
 
 		gen->gen_seed = 0;
@@ -1183,9 +1183,11 @@ main(int argc, char **argv)
        
 	/* revoke privs */
 #ifdef HAVE_SETEUID
-        seteuid(getuid());
+	if (seteuid(getuid()) == -1)
+		err(1, "seteuid");
 #endif /* HAVE_SETEUID */
-        setuid(getuid());
+	if (setuid(getuid()) == -1)
+		err(1, "setuid");
 
 	/* Set up our port ranges */
 	if (ss_nports == 0) {

@@ -101,7 +101,13 @@ AC_ARG_WITH(libpcap,
      ;;
   *)
      AC_MSG_RESULT($withval)
-     if test -f $withval/pcap.h -a -f $withval/libpcap.a; then
+     if test -f $withval/include/pcap.h -a -f $withval/lib/libpcap.a; then
+        PCAPINC="-I$withval/include -I$withval/include/bpf"
+        PCAPLIB="-L$withval/lib -lpcap"
+     elif test -f $withval/include/pcap.h -a -f $withval/libpcap.a; then
+        PCAPINC="-I$withval/include"
+        PCAPLIB="-L$withval -lpcap"
+     elif test -f $withval/pcap.h -a -f $withval/libpcap.a; then
         owd=`pwd`
         if cd $withval; then withval=`pwd`; cd $owd; fi
 	PCAPINC="-I$withval -I$withval/bpf"
@@ -110,7 +116,7 @@ AC_ARG_WITH(libpcap,
         AC_MSG_ERROR(pcap.h or libpcap.a not found in $withval)
      fi
      ;;
-  esac ],
+   esac ],
 [ if test -f ${prefix}/include/pcap.h; then
      PCAPINC="-I${prefix}/include"
      PCAPLIB="-L${prefix}/lib -lpcap"
@@ -138,15 +144,32 @@ AC_ARG_WITH(libdnet,
   *)
      AC_MSG_CHECKING(for libdnet)
      AC_MSG_RESULT($withval)
-     if test -f $withval/src/libdnet.a; then
-	DNETINC="-I$withval/include"
-	DNETLIB="-L$withval/src -ldnet `$withval/dnet-config --libs`"
+     if test -f $withval/lib/libdnet.a -o -f $withval/src/libdnet.a; then
+        if test -f $withval/include/dnet.h; then
+           DNETINC="-I$withval/include"
+        elif test -f $withval/src/dnet.h; then
+           DNETINC="-I$withval/src/include"
+        fi
+        if test -f $withval/lib/libdnet.a; then
+           DNETLIB="-L$withval/lib -ldnet"
+        elif test -f $withval/src/libdnet.a; then
+           DNETLIB="-L$withval/src -ldnet"
+        fi
      elif test -x $withval/bin/dnet-config; then
-	DNETINC="`$withval/bin/dnet-config --cflags`"
-	DNETLIB="`$withval/bin/dnet-config --libs`"
+        DNETINC="`$withval/bin/dnet-config --cflags`"
+        DNETLIB="`$withval/bin/dnet-config --libs`"
+      elif test -x /usr/local/bin/dnet-config; then
+        DNETINC="`/usr/local/bin/dnet-config --cflags`"
+        DNETLIB="`/usr/local/bin/dnet-config --libs`"
+      elif test -x /opt/homebrew/bin/dnet-config; then
+        DNETINC="`/opt/homebrew/bin/dnet-config --cflags`"
+        DNETLIB="`/opt/homebrew/bin/dnet-config --libs`"
+      elif test -x /opt/local/bin/dnet-config; then
+        DNETINC="`/opt/local/bin/dnet-config --cflags`"
+        DNETLIB="`/opt/local/bin/dnet-config --libs`"
      else
         AC_MSG_RESULT(no)
-        AC_MSG_ERROR(dnet-config not found in $withval/bin)
+        AC_MSG_ERROR(dnet-config or libdnet.a not found in $withval)
      fi
      ;;
   esac
@@ -199,7 +222,10 @@ AC_ARG_WITH(libevent,
      ;;
   *)
      AC_MSG_RESULT($withval)
-     if test -f $withval/event.h -a -f $withval/libevent.a; then
+     if test -f $withval/include/event.h -a -f $withval/lib/libevent.a; then
+        PCAPINC="-I$withval/include"
+        EVENTLIB="-L$withval/lib -levent"
+     elif test -f $withval/event.h -a -f $withval/libevent.a; then
         owd=`pwd`
         if cd $withval; then withval=`pwd`; cd $owd; fi
         EVENTINC="-I$withval"
@@ -208,7 +234,7 @@ AC_ARG_WITH(libevent,
         AC_MSG_ERROR(event.h or libevent.a not found in $withval)
      fi
      ;;
-  esac ],
+   esac ],
 [ if test -f ${prefix}/include/event.h; then
      EVENTINC="-I${prefix}/include"
      EVENTLIB="-L${prefix}/lib -levent"

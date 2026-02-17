@@ -95,8 +95,14 @@ interface_new(char *dev)
 		err(1, "%s: calloc", __func__);
 
 	if (dev == NULL) {
-		if ((dev = pcap_lookupdev(ebuf)) == NULL)
-			errx(1, "pcap_lookupdev: %s", ebuf);
+		pcap_if_t *alldevs;
+		if (pcap_findalldevs(&alldevs, ebuf) == -1)
+			errx(1, "pcap_findalldevs: %s", ebuf);
+		if (alldevs == NULL)
+			errx(1, "pcap_findalldevs: no interfaces found");
+		strlcpy(ebuf, alldevs->name, sizeof(ebuf));
+		pcap_freealldevs(alldevs);
+		dev = ebuf;
 	}
 
 	TAILQ_INSERT_TAIL(&interfaces, inter, next);
@@ -258,9 +264,12 @@ interface_expandips(int naddresses, char **addresses, int dstonly)
 		}
 
 		if (addr_pton(p, &dst) != -1) {
-			snprintf(line, sizeof(line), "%s%s%s",
-			    dstonly ? "dst " : "",
-			    dst.addr_bits != 32 ? "net ": "", p);
+			if (dst.addr_bits == 32)
+				snprintf(line, sizeof(line), "%shost %s",
+				    dstonly ? "dst " : "", p);
+			else
+				snprintf(line, sizeof(line), "%snet %s/%d",
+				    dstonly ? "dst " : "", p, dst.addr_bits);
 		} else {
 			char *first, *second;
 			struct addr astart, aend;
