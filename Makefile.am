@@ -4,7 +4,7 @@ bin_PROGRAMS = scanssh
 
 scanssh_SOURCES = scanssh.c atomicio.c exclude.c connecter.c xmalloc.c \
 	interface.c socks.c http.c telnet.c exclude.h interface.h \
-	scanssh.h socks.h xmalloc.h
+	scanssh.h socks.h string-compat.h xmalloc.h
 scanssh_LDADD = @LIBOBJS@ @PCAPLIB@ @EVENTLIB@ @DNETLIB@
 CFLAGS = @CFLAGS@
 
@@ -13,8 +13,8 @@ AM_CPPFLAGS = -I$(top_srcdir)/@DNETCOMPAT@ -I$(top_srcdir)/compat \
 
 man_MANS = scanssh.1
 
-EXTRA_DIST = $(man_MANS) README.md acconfig.h \
-	   md5.c err.c \
+EXTRA_DIST = $(man_MANS) README.md RELEASING.md \
+	   md5.c err.c string-compat.h \
 	   compat/libdnet/dnet.h \
 	   compat/err.h compat/md5.h \
 	   compat/sys/queue.h compat/sys/tree.h

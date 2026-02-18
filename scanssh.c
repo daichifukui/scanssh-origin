@@ -388,7 +388,7 @@ ss_recv_cb(uint8_t *ag, const struct pcap_pkthdr *pkthdr, const uint8_t *pkt)
 	ushort iplen, iphlen;
 
 	/* Everything below assumes that the packet is IPv4 */
-	if (pkthdr->caplen < inter->if_dloff + IP_HDR_LEN)
+	if (pkthdr->caplen < inter->if_dloff + sizeof(struct ip_hdr))
 		return;
 
 	pkt += inter->if_dloff;
@@ -407,6 +407,9 @@ ss_recv_cb(uint8_t *ag, const struct pcap_pkthdr *pkthdr, const uint8_t *pkt)
 	addr_pack(&addr, ADDR_TYPE_IP, IP_ADDR_BITS, &ip->ip_src, IP_ADDR_LEN);
 
 	if (iplen < iphlen + TCP_HDR_LEN)
+		return;
+
+	if (pkthdr->caplen < inter->if_dloff + iphlen + sizeof(struct tcp_hdr))
 		return;
 
 	tcp = (struct tcp_hdr *)(pkt + iphlen);
@@ -1146,6 +1149,30 @@ main(int argc, char **argv)
 	event_init();
 
 	interface_initialize();
+
+	/*
+	 * If no interface was specified, try to auto-detect the correct one
+	 * based on the first target address. This is important for local
+	 * network scanning where the default interface may not be the one
+	 * that routes to the target.
+	 */
+	if (dev == NULL && argc > 0) {
+		struct addr first_dst;
+		char addr_buf[256];
+		char *first_addr = argv[0];
+		char *colon;
+
+		strlcpy(addr_buf, first_addr, sizeof(addr_buf));
+		colon = strchr(addr_buf, ':');
+		if (colon)
+			*colon = '\0';
+		if (addr_pton(addr_buf, &first_dst) == 0) {
+			char *detected_if = interface_find_for_dst(&first_dst);
+			if (detected_if) {
+				dev = detected_if;
+			}
+		}
+	}
 
 	/* Initialize the specified interfaces */
 	interface_init(dev, 0, NULL,

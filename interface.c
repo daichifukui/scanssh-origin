@@ -56,6 +56,7 @@
 
 #include "interface.h"
 #include "string-compat.h"
+#include "xmalloc.h"
 
 /* Prototypes */
 static int pcap_dloff(pcap_t *);
@@ -146,6 +147,49 @@ interface_find_addr(struct addr *addr)
 	return (NULL);
 }
 
+struct find_dst_arg {
+	struct addr *dst;
+	char *ifname;
+};
+
+static int
+find_dst_cb(const struct intf_entry *entry, void *arg)
+{
+	struct find_dst_arg *fda = arg;
+	uint32_t mask;
+
+	if (entry->intf_addr.addr_type != ADDR_TYPE_IP)
+		return (0);
+	if (entry->intf_addr.addr_bits == 0)
+		return (0);
+
+	mask = htonl(0xFFFFFFFFu << (32 - entry->intf_addr.addr_bits));
+	if ((fda->dst->addr_ip & mask) == (entry->intf_addr.addr_ip & mask)) {
+		fda->ifname = xstrdup(entry->intf_name);
+		return (1);
+	}
+	return (0);
+}
+
+char *
+interface_find_for_dst(struct addr *dst)
+{
+	struct find_dst_arg fda;
+	intf_t *intf;
+
+	fda.dst = dst;
+	fda.ifname = NULL;
+
+	intf = intf_open();
+	if (intf == NULL)
+		return (NULL);
+
+	intf_loop(intf, find_dst_cb, &fda);
+	intf_close(intf);
+
+	return (fda.ifname);
+}
+
 void
 interface_close(struct interface *inter)
 {
@@ -231,8 +275,8 @@ interface_init(char *dev, int naddresses, char **addresses, char *filter)
 		struct timeval tv = SS_POLL_INTERVAL;
 
 		syslog(LOG_INFO, "switching to polling mode");
-		timeout_set(&inter->if_recvev, interface_poll_recv, inter);
-		timeout_add(&inter->if_recvev, &tv);
+		evtimer_set(&inter->if_recvev, interface_poll_recv, inter);
+		evtimer_add(&inter->if_recvev, &tv);
 	}
 }
 
@@ -364,7 +408,7 @@ interface_poll_recv(int fd, short type, void *arg)
 	struct interface *inter = arg;
 	struct timeval tv = SS_POLL_INTERVAL;
 
-	timeout_add(&inter->if_recvev, &tv);
+	evtimer_add(&inter->if_recvev, &tv);
 
 	interface_recv(fd, type, arg);
 }
